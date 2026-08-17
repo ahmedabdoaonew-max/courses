@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // الأقسام والمحاضرات: قراءة للجميع، تعديل للمدير المسجّل دخوله فقط
+    match /sections/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /lectures/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // الإعدادات (رقم واتساب): قراءة للجميع، تعديل للمدير فقط
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // التسجيلات: أي زائر يقدر يسجّل نفسه أو يحدّث عدد مرات دخوله،
+    // لكن قراءة كل السجلات وحذفها للمدير فقط
+    match /registrations/{id} {
+      allow create, update: if true;
+      allow read, delete: if request.auth != null;
+    }
+  }
+}

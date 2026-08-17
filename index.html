@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>منصّة المحاضرات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  * { box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+  html,body,#root{ min-height:100%; }
+  body { margin:0; background: radial-gradient(1200px 600px at 15% -5%, #1c3b45 0%, #0f2027 55%, #0b1a20 100%); color:#e9e4d8; }
+  .font-display{ font-family:'Amiri', serif; }
+  .panel-bg{ background:#16323e; }
+  .card-bg{ background:#14303b; }
+  .text-gold{ color:#c9a24b; }
+  .bg-gold{ background:#c9a24b; }
+  .text-ink{ color:#12252c; }
+  .text-teal2{ color:#7fc7c7; }
+  .bg-teal2{ background:#3e7c7c; }
+  .border-gold{ border-color:rgba(201,162,75,.25); }
+  a, button { cursor:pointer; }
+  button { font-family:inherit; }
+  input, select, textarea{ font-family:inherit; outline:none; }
+  input:focus, select:focus, textarea:focus, button:focus-visible{ box-shadow:0 0 0 2px #c9a24b; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:0 16px; }
+  .header{ position:sticky; top:0; z-index:30; backdrop-filter: blur(6px); background: rgba(15,32,39,.85); border-bottom:1px solid rgba(201,162,75,.2); }
+  .header-inner{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; }
+  .logo{ display:flex; align-items:center; gap:8px; background:none; border:none; color:inherit; }
+  .logo-badge{ width:36px; height:36px; border-radius:999px; background:#c9a24b; color:#12252c; display:flex; align-items:center; justify-content:center; font-weight:900; }
+  .admin-btn{ display:flex; align-items:center; gap:6px; font-size:14px; color:#7fc7c7; background:none; border:1px solid rgba(201,162,75,.25); padding:6px 12px; border-radius:8px; }
+  .admin-btn:hover{ color:#c9a24b; }
+  .grid{ display:grid; gap:20px; }
+  .grid-3{ grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .card{ text-align:right; background:#14303b; border-radius:14px; overflow:hidden; border:1px solid rgba(201,162,75,.15); transition:.2s; box-shadow:0 10px 25px rgba(0,0,0,.25); }
+  .card:hover{ border-color:rgba(201,162,75,.6); transform:translateY(-3px); }
+  .cover{ position:relative; height:170px; width:100%; overflow:hidden; }
+  .cover img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:opacity 1.4s; }
+  .cover-shade{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(15,32,39,0) 40%, rgba(15,32,39,.85) 100%); }
+  .placeholder-cover{ background: repeating-linear-gradient(135deg,#1c3b45,#1c3b45 10px,#18333c 10px,#18333c 20px); display:flex; align-items:center; justify-content:center; color:#c9a24b; opacity:.5; height:100%; }
+  .card-body{ padding:14px; }
+  .btn{ display:inline-flex; align-items:center; gap:8px; justify-content:center; border:none; border-radius:10px; padding:10px 16px; font-weight:700; }
+  .btn-gold{ background:#c9a24b; color:#12252c; }
+  .btn-gold:hover{ filter:brightness(1.1); }
+  .btn-teal{ background:#3e7c7c; color:#12252c; }
+  .btn-outline{ background:none; border:1px solid rgba(201,162,75,.3); color:#7fc7c7; }
+  .field{ display:block; margin-bottom:10px; }
+  .field span{ display:block; font-size:12px; color:#7fc7c7; margin-bottom:4px; }
+  .field input, .field select, .field textarea{
+    width:100%; background:rgba(15,32,39,.6); border:1px solid rgba(201,162,75,.25); border-radius:8px; padding:9px 12px; color:#e9e4d8; font-size:14px;
+  }
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
+  .modal{ background:#16323e; border:1px solid rgba(201,162,75,.25); border-radius:16px; padding:24px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto; position:relative; }
+  .modal.wide{ max-width:680px; }
+  .modal-close{ position:absolute; left:16px; top:16px; background:none; border:none; color:#7fc7c7; font-size:18px; }
+  .error-box{ font-size:13px; color:#fca5a5; background:rgba(120,20,20,.3); border:1px solid rgba(220,90,90,.3); border-radius:8px; padding:8px 12px; margin-bottom:10px; }
+  .success-box{ font-size:13px; color:#7fc7c7; }
+  .lecture-thumb{ position:relative; height:120px; width:100%; overflow:hidden; }
+  .lecture-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .badge{ position:absolute; top:8px; left:8px; background:rgba(18,37,44,.7); color:#c9a24b; font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid rgba(201,162,75,.3); }
+  .lock-badge{ position:absolute; bottom:8px; right:8px; background:rgba(18,37,44,.7); font-size:11px; padding:4px 8px; border-radius:999px; display:flex; align-items:center; gap:4px; }
+  .admin-shell{ display:flex; min-height:100vh; }
+  .sidebar{ background:#16323e; border-left:1px solid rgba(201,162,75,.2); width:250px; flex-shrink:0; }
+  .sidebar-header{ padding:16px; border-bottom:1px solid rgba(201,162,75,.15); display:flex; align-items:center; justify-content:space-between; }
+  .nav-btn{ width:100%; display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; background:none; border:none; color:#e9e4d8; text-align:right; font-size:14px; }
+  .nav-btn.active{ background:#c9a24b; color:#12252c; font-weight:700; }
+  .nav-btn:not(.active):hover{ background:rgba(255,255,255,.06); }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th{ text-align:right; padding:10px; color:#7fc7c7; border-bottom:1px solid rgba(201,162,75,.15); }
+  td{ padding:10px; border-bottom:1px solid rgba(201,162,75,.08); }
+  details{ background:#14303b; border:1px solid rgba(201,162,75,.15); border-radius:12px; margin-bottom:10px; }
+  summary{ padding:14px; cursor:pointer; font-weight:700; display:flex; justify-content:space-between; align-items:center; list-style:none; }
+  summary::-webkit-details-marker{ display:none; }
+  .details-body{ padding:0 16px 16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:600px){ .details-body{ grid-template-columns:1fr; } }
+  .full-span{ grid-column:1/-1; }
+  .center-screen{ min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .spin{ animation: spin 1s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ============================================================
+   إعدادات فايربيز — الصق بيانات مشروعك هنا (من Project settings > عام > Your apps)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "ضع-هنا-apiKey",
+  authDomain: "ضع-هنا-authDomain",
+  projectId: "ضع-هنا-projectId",
+  storageBucket: "ضع-هنا-storageBucket",
+  messagingSenderId: "ضع-هنا-messagingSenderId",
+  appId: "ضع-هنا-appId",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+function normalizeName(n){ return (n||"").trim().replace(/\s+/g," ").toLowerCase(); }
+
+function defaultSectionsData() {
+  return [
+    { id: "sec-1", name: "القسم الأول", img1: "", img2: "" },
+    { id: "sec-2", name: "القسم الثاني", img1: "", img2: "" },
+    { id: "sec-3", name: "القسم الثالث", img1: "", img2: "" },
+  ];
+}
+function defaultLecturesData() {
+  const list = [];
+  defaultSectionsData().forEach((s, si) => {
+    for (let i = 1; i <= 10; i++) {
+      list.push({
+        id: `${s.id}-L${i}`, sectionId: s.id, title: `المحاضرة ${i}`, description: "",
+        thumbnail: "", mediaType: "video-file", mediaUrl: "",
+        accessCode: String(100 * (si + 1) + i), viewLimit: 3,
+      });
+    }
+  });
+  return list;
+}
+
+/* ============ طبقة البيانات (Firestore) ============ */
+async function fetchPublicState() {
+  const [secSnap, lecSnap, settingsDoc] = await Promise.all([
+    db.collection("sections").get(),
+    db.collection("lectures").get(),
+    db.collection("settings").doc("main").get(),
+  ]);
+  const sections = secSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const lectures = lecSnap.docs.map(d => {
+    const data = { ...d.data() };
+    delete data.mediaUrl; delete data.accessCode;
+    return { id: d.id, ...data };
+  });
+  const whatsappNumber = settingsDoc.exists ? (settingsDoc.data().whatsappNumber || "") : "";
+  return { sections, lectures, whatsappNumber };
+}
+
+async function registerForLecture(name, lectureId, code) {
+  const lecRef = db.collection("lectures").doc(lectureId);
+  const lecDoc = await lecRef.get();
+  if (!lecDoc.exists) return { ok: false, error: "المحاضرة غير موجودة." };
+  const lecture = lecDoc.data();
+  if (!lecture.mediaUrl) return { ok: false, error: "لم يتم إضافة رابط هذه المحاضرة بعد من الإدارة." };
+  if (String(code).trim() !== String(lecture.accessCode)) return { ok: false, error: "رقم ID المحاضرة غير صحيح." };
+
+  const regId = `${lectureId}__${normalizeName(name)}`;
+  const regRef = db.collection("registrations").doc(regId);
+  const regDoc = await regRef.get();
+  const count = regDoc.exists ? regDoc.data().viewCount : 0;
+  if (count >= lecture.viewLimit) {
+    return { ok: false, error: `لقد استنفذت عدد المرات المسموح بها لعرض هذه المحاضرة (${lecture.viewLimit}).` };
+  }
+  await regRef.set({ name: name.trim(), lectureId, viewCount: count + 1, lastAccess: new Date().toISOString() });
+  return { ok: true, title: lecture.title, description: lecture.description, mediaType: lecture.mediaType, mediaUrl: lecture.mediaUrl };
+}
+
+async function fetchAdminState() {
+  const [secSnap, lecSnap, regSnap, settingsDoc] = await Promise.all([
+    db.collection("sections").get(),
+    db.collection("lectures").get(),
+    db.collection("registrations").get(),
+    db.collection("settings").doc("main").get(),
+  ]);
+  return {
+    sections: secSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lectures: lecSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+    registrations: regSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+    settings: settingsDoc.exists ? settingsDoc.data() : { whatsappNumber: "" },
+  };
+}
+
+async function seedDefaults() {
+  const batch = db.batch();
+  defaultSectionsData().forEach(s => { const { id, ...rest } = s; batch.set(db.collection("sections").doc(id), rest); });
+  defaultLecturesData().forEach(l => { const { id, ...rest } = l; batch.set(db.collection("lectures").doc(id), rest); });
+  batch.set(db.collection("settings").doc("main"), { whatsappNumber: "" });
+  await batch.commit();
+}
+
+async function saveSections(sections) {
+  const batch = db.batch();
+  sections.forEach(s => { const { id, ...rest } = s; batch.set(db.collection("sections").doc(id), rest); });
+  await batch.commit();
+}
+async function saveLectures(lectures) {
+  const batch = db.batch();
+  lectures.forEach(l => { const { id, ...rest } = l; batch.set(db.collection("lectures").doc(id), rest); });
+  await batch.commit();
+}
+async function saveSettings(settings) {
+  await db.collection("settings").doc("main").set(settings);
+}
+async function updateRegistrationDoc(lectureId, name, viewCount) {
+  const regId = `${lectureId}__${normalizeName(name)}`;
+  await db.collection("registrations").doc(regId).update({ viewCount });
+}
+async function deleteRegistrationDoc(lectureId, name) {
+  const regId = `${lectureId}__${normalizeName(name)}`;
+  await db.collection("registrations").doc(regId).delete();
+}
+function getEmbedUrl(mediaType, url){
+  if (mediaType === "youtube") {
+    const m = (url||"").match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{6,})/);
+    return m ? `https://www.youtube.com/embed/${m[1]}` : "";
+  }
+  if (mediaType === "vimeo") {
+    const m = (url||"").match(/vimeo\.com\/(\d+)/);
+    return m ? `https://player.vimeo.com/video/${m[1]}` : "";
+  }
+  return url || "";
+}
+
+/* ============ أيقونات بسيطة (SVG) ============ */
+const Icon = ({ path, size = 16, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    {path}
+  </svg>
+);
+const IconLock = (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />;
+const IconBook = (p) => <Icon {...p} path={<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>} />;
+const IconSend = (p) => <Icon {...p} path={<><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></>} />;
+const IconShield = (p) => <Icon {...p} path={<path d="M12 2 4 5v6c0 5.5 3.8 9.7 8 11 4.2-1.3 8-5.5 8-11V5l-8-3z"/>} />;
+const IconX = (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="M6 6l12 12"/></>} />;
+const IconKey = (p) => <Icon {...p} path={<><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></>} />;
+const IconUsers = (p) => <Icon {...p} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+const IconSettings = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />;
+const IconGrid = (p) => <Icon {...p} path={<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>} />;
+const IconTrash = (p) => <Icon {...p} path={<><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></>} />;
+const IconRotate = (p) => <Icon {...p} path={<><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></>} />;
+const IconCheck = (p) => <Icon {...p} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></>} />;
+const IconWarn = (p) => <Icon {...p} path={<><path d="m10.29 3.86-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-3l-8.18-14.14a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
+const IconMenu = (p) => <Icon {...p} path={<><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></>} />;
+const IconLogIn = (p) => <Icon {...p} path={<><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></>} />;
+const IconSave = (p) => <Icon {...p} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></>} />;
+const IconPhone = (p) => <Icon {...p} path={<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>} />;
+const IconLoader = (p) => <Icon {...p} path={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />;
+
+/* ============ غلاف متحرك (صورتان) ============ */
+function CrossfadeCover({ img1, img2, alt }) {
+  const [show1, setShow1] = useState(true);
+  useEffect(() => { const t = setInterval(() => setShow1(s => !s), 2600); return () => clearInterval(t); }, []);
+  const hasImgs = img1 || img2;
+  return (
+    <div className="cover">
+      {hasImgs ? (
+        <>
+          {img1 && <img src={img1} alt={alt} style={{ opacity: show1 ? 1 : 0 }} />}
+          {img2 && <img src={img2} alt={alt} style={{ opacity: show1 ? 0 : 1 }} />}
+        </>
+      ) : <div className="placeholder-cover"><IconBook size={30} /></div>}
+      <div className="cover-shade" />
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, type = "text", onEnter }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input type={type} value={value} placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter" && onEnter) onEnter(); }} />
+    </label>
+  );
+}
+
+function ModalShell({ children, onClose, wide }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className={`modal ${wide ? "wide" : ""}`} onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><IconX size={18} /></button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ============ التطبيق الرئيسي ============ */
+function App() {
+  const [loading, setLoading] = useState(true);
+  const [sections, setSections] = useState([]);
+  const [lectures, setLectures] = useState([]);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+
+  const [view, setView] = useState("home");
+  const [activeSectionId, setActiveSectionId] = useState(null);
+  const [requestModalSection, setRequestModalSection] = useState(null);
+  const [loginLecture, setLoginLecture] = useState(null);
+  const [unlockedContent, setUnlockedContent] = useState(null);
+
+  const loadPublicState = useCallback(async () => {
+    try {
+      const d = await fetchPublicState();
+      setSections(d.sections); setLectures(d.lectures); setWhatsappNumber(d.whatsappNumber);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }, []);
+  useEffect(() => { loadPublicState(); }, [loadPublicState]);
+
+  if (loading) {
+    return <div className="center-screen"><IconLoader className="spin" size={28} /></div>;
+  }
+
+  return (
+    <div>
+      {view !== "admin" && (
+        <header className="header"><div className="wrap header-inner">
+          <button className="logo" onClick={() => { setView("home"); setActiveSectionId(null); }}>
+            <span className="logo-badge"><IconBook size={18} /></span>
+            <span className="font-display text-gold" style={{ fontSize: 20 }}>منصّة المحاضرات</span>
+          </button>
+          <button className="admin-btn" onClick={() => setView("admin")}><IconShield size={16} /> لوحة الإدارة</button>
+        </div></header>
+      )}
+
+      {view === "home" && (
+        <main className="wrap" style={{ padding: "40px 16px" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <p className="text-teal2" style={{ fontSize: 13, letterSpacing: 1 }}>ثلاثة أقسام · محتوى موثّق</p>
+            <h1 className="font-display text-gold" style={{ fontSize: 30 }}>اختر القسم الذي يهمّك</h1>
+          </div>
+          <div className="grid grid-3">
+            {sections.map(s => {
+              const count = lectures.filter(l => l.sectionId === s.id).length;
+              return (
+                <button key={s.id} className="card" onClick={() => { setActiveSectionId(s.id); setView("section"); }}>
+                  <CrossfadeCover img1={s.img1} img2={s.img2} alt={s.name} />
+                  <div className="card-body">
+                    <h2 className="font-display" style={{ fontSize: 19, margin: "0 0 4px" }}>{s.name}</h2>
+                    <p className="text-teal2" style={{ fontSize: 13, margin: 0 }}>{count} محاضرة</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </main>
+      )}
+
+      {view === "section" && (
+        <SectionView
+          section={sections.find(s => s.id === activeSectionId)}
+          lectures={lectures.filter(l => l.sectionId === activeSectionId)}
+          onBack={() => setView("home")}
+          onOpenLecture={setLoginLecture}
+          onRequestId={() => setRequestModalSection(sections.find(s => s.id === activeSectionId))}
+        />
+      )}
+
+      {view === "admin" && <Admin onExit={() => { setView("home"); loadPublicState(); }} />}
+
+      {loginLecture && (
+        <LectureLoginModal
+          lecture={loginLecture}
+          onClose={() => setLoginLecture(null)}
+          onUnlock={(content, name) => { setUnlockedContent({ ...content, userName: name }); setLoginLecture(null); }}
+        />
+      )}
+
+      {unlockedContent && <LecturePlayerModal content={unlockedContent} onClose={() => setUnlockedContent(null)} />}
+
+      {requestModalSection && (
+        <RequestIdModal section={requestModalSection} whatsappNumber={whatsappNumber} onClose={() => setRequestModalSection(null)} />
+      )}
+    </div>
+  );
+}
+
+function SectionView({ section, lectures, onBack, onOpenLecture, onRequestId }) {
+  if (!section) return null;
+  return (
+    <main className="wrap" style={{ padding: "32px 16px" }}>
+      <button onClick={onBack} className="admin-btn" style={{ border: "none", padding: 0, marginBottom: 20 }}>→ رجوع للأقسام</button>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 14, marginBottom: 28 }}>
+        <div>
+          <p className="text-teal2" style={{ fontSize: 13, margin: 0 }}>{section.name}</p>
+          <h1 className="font-display text-gold" style={{ fontSize: 26, margin: "4px 0 0" }}>محاضرات القسم</h1>
+        </div>
+        <button className="btn btn-gold" onClick={onRequestId}><IconSend size={16} /> إرسال طلب جلب ID القسم</button>
+      </div>
+      <div className="grid grid-3">
+        {lectures.map((lec, i) => (
+          <button key={lec.id} className="card" onClick={() => onOpenLecture(lec)}>
+            <div className="lecture-thumb">
+              {lec.thumbnail ? <img src={lec.thumbnail} alt={lec.title} /> : <div className="placeholder-cover" style={{ height: "100%" }}><IconBook size={20} /></div>}
+              <span className="badge">{i + 1}</span>
+              <span className="lock-badge"><IconLock size={11} /> محمي</span>
+            </div>
+            <div className="card-body">
+              <h3 style={{ margin: "0 0 4px", fontSize: 15 }}>{lec.title}</h3>
+              {lec.description && <p className="text-teal2" style={{ fontSize: 12, margin: 0 }}>{lec.description}</p>}
+            </div>
+          </button>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+function LectureLoginModal({ lecture, onClose, onUnlock }) {
+  const [name, setName] = useState(""); const [code, setCode] = useState("");
+  const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setError("");
+    if (!name.trim()) { setError("من فضلك أدخل الاسم."); return; }
+    if (!code.trim()) { setError("من فضلك أدخل ID المحاضرة."); return; }
+    setBusy(true);
+    const res = await registerForLecture(name.trim(), lecture.id, code.trim());
+    setBusy(false);
+    if (!res.ok) { setError(res.error || "حدث خطأ."); return; }
+    onUnlock(res, name.trim());
+  };
+  return (
+    <ModalShell onClose={onClose}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><IconLock className="text-gold" size={18} /><h3 className="font-display text-gold" style={{ margin: 0, fontSize: 20 }}>دخول المحاضرة</h3></div>
+      <p className="text-teal2" style={{ fontSize: 13, marginBottom: 18 }}>{lecture.title}</p>
+      <Field label="الاسم" value={name} onChange={setName} placeholder="اكتب اسمك" onEnter={submit} />
+      <Field label="ID المحاضرة" value={code} onChange={setCode} placeholder="اكتب الرقم الذي حصلت عليه" onEnter={submit} />
+      {error && <p className="error-box"><IconWarn size={14} /> {error}</p>}
+      <button className="btn btn-gold" style={{ width: "100%" }} onClick={submit} disabled={busy}>
+        {busy ? <IconLoader className="spin" size={16} /> : <IconLogIn size={16} />} دخول
+      </button>
+    </ModalShell>
+  );
+}
+
+function LecturePlayerModal({ content, onClose }) {
+  const embed = getEmbedUrl(content.mediaType, content.mediaUrl);
+  return (
+    <ModalShell onClose={onClose} wide>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><IconCheck className="text-gold" size={18} /><h3 className="font-display text-gold" style={{ margin: 0, fontSize: 20 }}>{content.title}</h3></div>
+      <p className="text-teal2" style={{ fontSize: 13, marginBottom: 16 }}>أهلاً {content.userName} — استمتع بالمحاضرة</p>
+      <div style={{ borderRadius: 8, overflow: "hidden", background: "#000" }}>
+        {content.mediaType === "audio-file" ? <audio controls style={{ width: "100%" }} src={embed} /> :
+         content.mediaType === "video-file" ? <video controls style={{ width: "100%", maxHeight: "60vh" }} src={embed} /> :
+         embed ? <iframe src={embed} style={{ width: "100%", aspectRatio: "16/9", border: 0 }} allowFullScreen /> :
+         <p style={{ padding: 24, textAlign: "center" }}>تعذّر تحميل الرابط.</p>}
+      </div>
+      {content.description && <p style={{ fontSize: 14, marginTop: 14, lineHeight: 1.7 }}>{content.description}</p>}
+    </ModalShell>
+  );
+}
+
+function RequestIdModal({ section, whatsappNumber, onClose }) {
+  const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [error, setError] = useState("");
+  const send = () => {
+    if (!name.trim() || !phone.trim()) { setError("من فضلك أدخل الاسم ورقم الهاتف."); return; }
+    if (!whatsappNumber) { setError("لم يتم ضبط رقم واتساب الاستقبال بعد من الإدارة."); return; }
+    const text = `طلب جلب ID القسم\nالاسم: ${name.trim()}\nرقم الهاتف: ${phone.trim()}\nالقسم المطلوب: ${section.name}`;
+    window.open(`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(text)}`, "_blank");
+    onClose();
+  };
+  return (
+    <ModalShell onClose={onClose}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><IconPhone className="text-gold" size={18} /><h3 className="font-display text-gold" style={{ margin: 0, fontSize: 20 }}>طلب جلب ID القسم</h3></div>
+      <p className="text-teal2" style={{ fontSize: 13, marginBottom: 18 }}>{section.name} — سيتم فتح واتساب لإرسال طلبك</p>
+      <Field label="اسمك" value={name} onChange={setName} placeholder="الاسم بالكامل" onEnter={send} />
+      <Field label="رقم هاتفك" value={phone} onChange={setPhone} placeholder="مثال: 01xxxxxxxxx" onEnter={send} />
+      {error && <p className="error-box"><IconWarn size={14} /> {error}</p>}
+      <button className="btn btn-teal" style={{ width: "100%" }} onClick={send}><IconSend size={16} /> إرسال عبر واتساب</button>
+    </ModalShell>
+  );
+}
+
+/* ============ لوحة الإدارة ============ */
+function Admin({ onExit }) {
+  const [user, setUser] = useState(undefined); // undefined = جارٍ التحقق، null = غير مسجل
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    return () => unsub();
+  }, []);
+
+  if (user === undefined) return <div className="center-screen"><IconLoader className="spin" size={26} /></div>;
+
+  if (!user) return <AdminLogin onCancel={onExit} onSuccess={() => {}} />;
+  return <AdminPanel onExit={async () => { await auth.signOut(); onExit(); }} />;
+}
+
+function AdminLogin({ onCancel }) {
+  const [email, setEmail] = useState(""); const [pw, setPw] = useState("");
+  const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setError(""); setBusy(true);
+    try {
+      await auth.signInWithEmailAndPassword(email.trim(), pw);
+    } catch (e) {
+      setError("بيانات الدخول غير صحيحة، أو المستخدم غير موجود في Firebase Authentication.");
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="center-screen">
+      <div className="modal" style={{ maxWidth: 380 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}><IconKey className="text-gold" size={20} /><h2 className="font-display text-gold" style={{ margin: 0, fontSize: 20 }}>دخول لوحة الإدارة</h2></div>
+        <Field label="البريد الإلكتروني" value={email} onChange={setEmail} placeholder="admin@example.com" onEnter={submit} />
+        <Field label="كلمة السر" value={pw} onChange={setPw} placeholder="••••••••" type="password" onEnter={submit} />
+        {error && <p className="error-box">{error}</p>}
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button className="btn btn-gold" style={{ flex: 1 }} onClick={submit} disabled={busy}>{busy ? "..." : "دخول"}</button>
+          <button className="btn btn-outline" onClick={onCancel}>رجوع</button>
+        </div>
+        <p className="text-teal2" style={{ fontSize: 12, marginTop: 14, lineHeight: 1.6 }}>
+          لازم تكون عملت مستخدم إداري من Firebase Console &gt; Authentication &gt; Users قبل أول دخول.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AdminPanel({ onExit }) {
+  const [tab, setTab] = useState("lectures");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [data, setData] = useState(null);
+
+  const reload = useCallback(async () => {
+    try { setData(await fetchAdminState()); } catch (e) { console.error(e); }
+  }, []);
+  useEffect(() => { reload(); }, [reload]);
+
+  if (!data) return <div className="center-screen"><IconLoader className="spin" size={26} /></div>;
+
+  const tabs = [
+    { id: "lectures", label: "المحاضرات والأقسام", icon: IconGrid },
+    { id: "registrations", label: "المسجّلون", icon: IconUsers },
+    { id: "settings", label: "الإعدادات", icon: IconSettings },
+  ];
+
+  return (
+    <div className="admin-shell">
+      <aside className="sidebar" style={{ position: sidebarOpen ? "fixed" : undefined, inset: sidebarOpen ? "0 0 0 auto" : undefined, zIndex: 40 }}>
+        <div className="sidebar-header">
+          <span className="font-display text-gold" style={{ fontSize: 17 }}>لوحة الإدارة</span>
+          <button className="admin-btn" style={{ border: "none", padding: 4 }} onClick={() => setSidebarOpen(false)}><IconX size={16} /></button>
+        </div>
+        <nav style={{ padding: 10, display: "grid", gap: 4 }}>
+          {tabs.map(t => (
+            <button key={t.id} className={`nav-btn ${tab === t.id ? "active" : ""}`} onClick={() => { setTab(t.id); setSidebarOpen(false); }}>
+              <t.icon size={16} /> {t.label}
+            </button>
+          ))}
+        </nav>
+        <div style={{ padding: 10, borderTop: "1px solid rgba(201,162,75,.15)", marginTop: 8 }}>
+          <button className="nav-btn" onClick={onExit}>خروج من لوحة الإدارة</button>
+        </div>
+      </aside>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="header-inner wrap" style={{ display: "none" }}></div>
+        <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(201,162,75,.15)" }} className="panel-bg">
+          <button className="admin-btn" style={{ border: "none" }} onClick={() => setSidebarOpen(true)}><IconMenu size={18} /> القائمة</button>
+        </div>
+        <main style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
+          {tab === "lectures" && <AdminLectures data={data} reload={reload} />}
+          {tab === "registrations" && <AdminRegistrations data={data} reload={reload} />}
+          {tab === "settings" && <AdminSettings data={data} reload={reload} />}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function AdminLectures({ data, reload }) {
+  const [activeSection, setActiveSection] = useState(data.sections[0]?.id);
+  const [sections, setSections] = useState(data.sections);
+  const [lectures, setLectures] = useState(data.lectures);
+  const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  const updateSection = (id, patch) => setSections(sections.map(s => s.id === id ? { ...s, ...patch } : s));
+  const updateLecture = (id, patch) => setLectures(lectures.map(l => l.id === id ? { ...l, ...patch } : l));
+
+  const saveAll = async () => {
+    setSaving(true);
+    await saveSections(sections);
+    await saveLectures(lectures);
+    setSaving(false);
+    reload();
+  };
+
+  const runSeed = async () => {
+    setSeeding(true);
+    await seedDefaults();
+    setSeeding(false);
+    reload();
+  };
+
+  if (!sections.length) {
+    return (
+      <div className="card-bg" style={{ border: "1px solid rgba(201,162,75,.15)", borderRadius: 12, padding: 24, textAlign: "center" }}>
+        <p className="text-teal2" style={{ marginBottom: 14 }}>قاعدة البيانات فاضية لسه. اضغط الزر ده مرة واحدة عشان ينشئ ٣ أقسام و٣٠ محاضرة افتراضية تقدر تعدّل عليها.</p>
+        <button className="btn btn-gold" onClick={runSeed} disabled={seeding}>{seeding ? "جارٍ الإنشاء..." : "إنشاء البيانات الافتراضية"}</button>
+      </div>
+    );
+  }
+
+  const sec = sections.find(s => s.id === activeSection);
+  const secLectures = lectures.filter(l => l.sectionId === activeSection);
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {sections.map(s => (
+            <button key={s.id} onClick={() => setActiveSection(s.id)}
+              className="btn" style={{ background: activeSection === s.id ? "#c9a24b" : "transparent", color: activeSection === s.id ? "#12252c" : "#7fc7c7", border: "1px solid rgba(201,162,75,.25)", fontWeight: activeSection === s.id ? 700 : 400 }}>
+              {s.name}
+            </button>
+          ))}
+        </div>
+        <button className="btn btn-gold" onClick={saveAll} disabled={saving}><IconSave size={15} /> {saving ? "جارٍ الحفظ..." : "حفظ كل التغييرات"}</button>
+      </div>
+
+      {sec && (
+        <div className="card-bg" style={{ border: "1px solid rgba(201,162,75,.15)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <h3 className="text-gold" style={{ marginTop: 0, fontSize: 15 }}>بيانات القسم</h3>
+          <div className="details-body" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+            <Field label="اسم القسم" value={sec.name} onChange={v => updateSection(sec.id, { name: v })} />
+            <Field label="رابط صورة الغلاف 1" value={sec.img1} onChange={v => updateSection(sec.id, { img1: v })} placeholder="https://..." />
+            <Field label="رابط صورة الغلاف 2" value={sec.img2} onChange={v => updateSection(sec.id, { img2: v })} placeholder="https://..." />
+          </div>
+        </div>
+      )}
+
+      {secLectures.map((lec, i) => (
+        <details key={lec.id}>
+          <summary>
+            <span>{i + 1}. {lec.title}</span>
+            <span className="text-teal2" style={{ fontSize: 12 }}><IconKey size={12} /> ID: {lec.accessCode}</span>
+          </summary>
+          <div className="details-body">
+            <Field label="عنوان المحاضرة" value={lec.title} onChange={v => updateLecture(lec.id, { title: v })} />
+            <Field label="ID المحاضرة (كود الدخول)" value={lec.accessCode} onChange={v => updateLecture(lec.id, { accessCode: v })} />
+            <Field label="رابط الصورة المصغرة" value={lec.thumbnail} onChange={v => updateLecture(lec.id, { thumbnail: v })} placeholder="https://..." />
+            <label className="field">
+              <span>نوع الوسائط</span>
+              <select value={lec.mediaType} onChange={e => updateLecture(lec.id, { mediaType: e.target.value })}>
+                <option value="video-file">فيديو (ملف مباشر)</option>
+                <option value="audio-file">صوت (ملف مباشر)</option>
+                <option value="youtube">يوتيوب</option>
+                <option value="vimeo">Vimeo</option>
+                <option value="iframe">رابط تضمين آخر</option>
+              </select>
+            </label>
+            <div className="full-span"><Field label="رابط المحاضرة (فيديو/صوت)" value={lec.mediaUrl} onChange={v => updateLecture(lec.id, { mediaUrl: v })} placeholder="https://..." /></div>
+            <label className="field full-span">
+              <span>الشرح / الوصف</span>
+              <textarea rows={2} value={lec.description} onChange={e => updateLecture(lec.id, { description: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>عدد مرات السماح بالعرض لكل مستخدم</span>
+              <input type="number" min="1" value={lec.viewLimit} onChange={e => updateLecture(lec.id, { viewLimit: Math.max(1, Number(e.target.value) || 1) })} />
+            </label>
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function AdminRegistrations({ data, reload }) {
+  const [filterLecture, setFilterLecture] = useState("all");
+  const { lectures, registrations } = data;
+
+  const updateReg = async (r, viewCount) => {
+    await updateRegistrationDoc(r.lectureId, r.name, viewCount);
+    reload();
+  };
+  const deleteReg = async (r) => {
+    await deleteRegistrationDoc(r.lectureId, r.name);
+    reload();
+  };
+
+  const rows = registrations.filter(r => filterLecture === "all" || r.lectureId === filterLecture)
+    .sort((a, b) => new Date(b.lastAccess) - new Date(a.lastAccess));
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}><IconUsers className="text-gold" size={18} /><h2 className="font-display text-gold" style={{ margin: 0, fontSize: 20 }}>المسجّلون في المحاضرات</h2></div>
+      <label className="field" style={{ maxWidth: 260 }}>
+        <span>تصفية حسب المحاضرة</span>
+        <select value={filterLecture} onChange={e => setFilterLecture(e.target.value)}>
+          <option value="all">كل المحاضرات</option>
+          {lectures.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
+        </select>
+      </label>
+      <div className="card-bg" style={{ border: "1px solid rgba(201,162,75,.15)", borderRadius: 12, overflowX: "auto", marginTop: 10 }}>
+        <table>
+          <thead><tr><th>الاسم</th><th>المحاضرة</th><th>عدد مرات الدخول</th><th>آخر دخول</th><th></th></tr></thead>
+          <tbody>
+            {rows.map(r => {
+              const lec = lectures.find(l => l.id === r.lectureId);
+              return (
+                <tr key={r.lectureId + r.name}>
+                  <td>{r.name}</td>
+                  <td className="text-teal2">{lec?.title || "—"}</td>
+                  <td>
+                    <input type="number" min="0" value={r.viewCount} style={{ width: 60 }}
+                      onChange={e => updateReg(r, Math.max(0, Number(e.target.value) || 0))} />
+                    <span className="text-teal2" style={{ fontSize: 12 }}> / {lec?.viewLimit ?? "-"}</span>
+                  </td>
+                  <td className="text-teal2" style={{ fontSize: 12 }}>{r.lastAccess ? new Date(r.lastAccess).toLocaleString("ar-EG") : "-"}</td>
+                  <td style={{ display: "flex", gap: 8 }}>
+                    <button title="تصفير العداد" className="admin-btn" style={{ border: "none", padding: 4 }} onClick={() => updateReg(r, 0)}><IconRotate size={15} /></button>
+                    <button title="حذف" className="admin-btn" style={{ border: "none", padding: 4, color: "#fca5a5" }} onClick={() => deleteReg(r)}><IconTrash size={15} /></button>
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && <tr><td colSpan="5" style={{ textAlign: "center", padding: 24 }} className="text-teal2">لا يوجد مسجّلون بعد.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AdminSettings({ data, reload }) {
+  const [num, setNum] = useState(data.settings.whatsappNumber || "");
+  const [saved, setSaved] = useState(false);
+  const save = async () => {
+    await saveSettings({ ...data.settings, whatsappNumber: num });
+    setSaved(true); reload();
+    setTimeout(() => setSaved(false), 1800);
+  };
+  return (
+    <div style={{ maxWidth: 420 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}><IconSettings className="text-gold" size={18} /><h2 className="font-display text-gold" style={{ margin: 0, fontSize: 20 }}>الإعدادات</h2></div>
+      <div className="card-bg" style={{ border: "1px solid rgba(201,162,75,.15)", borderRadius: 12, padding: 16 }}>
+        <Field label="رقم واتساب استقبال طلبات ID الأقسام (بالصيغة الدولية بدون +)" value={num} onChange={setNum} placeholder="مثال: 201234567890" />
+        <button className="btn btn-gold" onClick={save}><IconSave size={15} /> حفظ</button>
+        {saved && <p className="success-box" style={{ marginTop: 8 }}><IconCheck size={14} /> تم الحفظ</p>}
+      </div>
+      <p className="text-teal2" style={{ fontSize: 12, marginTop: 16, lineHeight: 1.7 }}>
+        لإضافة مدير جديد أو تغيير كلمة السر: من Firebase Console &gt; Authentication &gt; Users.
+      </p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
